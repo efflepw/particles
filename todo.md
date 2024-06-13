@@ -3,4 +3,5 @@
 - [x] draw a lot of dots
 - [x] add random flow of dots
 - [x] add cursor movement interaction
-- [ ] add different themes
+- [x] add different themes
+- [ ] add waves
