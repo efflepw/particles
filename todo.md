@@ -2,5 +2,5 @@
 
 - [x] draw a lot of dots
 - [x] add random flow of dots
-- [ ] add on cursor movement handler to
+- [x] add cursor movement interaction
 - [ ] add different themes
