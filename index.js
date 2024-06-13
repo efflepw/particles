@@ -1,12 +1,13 @@
 const CONFIG = {
-  PARTICLES_AMOUNT: 2500,
-  DISTANCE_PER_FRAME: 0.15,
+  PARTICLES_AMOUNT: 1000,
+  SPEED: 0.15,
+  FLOAT_SPEED_DELTA: 0.3,
   DISTANCE_ACCELERATOR: 0.05,
   CANVAS_WIDTH: 1728,
   CANVAS_HEIGHT: 897,
-  DOT_SIZE: 2,
+  DOT_SIZE: 1,
   DISTANCE_TO_MOUSE: 100,
-  PARTICLE_COLOR: "#d959f9",
+  PARTICLE_COLOR: "#f4ef4f",
 };
 
 window.onload = () => {
@@ -21,7 +22,7 @@ window.onload = () => {
   ctx.fillStyle = CONFIG.PARTICLE_COLOR;
 
   const particles = createParticles();
-  const mouse = { x: 0, y: 0 };
+  const mouse = { x: -200, y: -200 };
 
   document.addEventListener("mousemove", (e) =>
     updateMousePosition(e, rect, canvas, mouse)
@@ -34,8 +35,9 @@ const createParticles = () =>
     x: Math.random() * CONFIG.CANVAS_WIDTH,
     y: Math.random() * CONFIG.CANVAS_HEIGHT,
     alpha: Math.random() * Math.PI * 2,
-    speed: CONFIG.DISTANCE_PER_FRAME + Math.random() * 0.1,
-    maxFloatingSpeed: CONFIG.DISTANCE_PER_FRAME + Math.random() * 0.4 - 0.2,
+    speed: CONFIG.SPEED + Math.random() * 0.1,
+    maxFloatingSpeed:
+      CONFIG.SPEED + (Math.random() - 0.5) * CONFIG.FLOAT_SPEED_DELTA,
   }));
 
 const updateMousePosition = (e, rect, canvas, mouse) => {
