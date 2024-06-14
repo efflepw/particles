@@ -3,17 +3,32 @@ const THEMES = {
   PALETTE_2: ["#f4f1de", "#e07a5f", "#3d405b", "#81b29a", "#f2cc8f"],
 };
 
+const MODES = {
+  REPULSION: "repulsion",
+  ATTRACTION: "attraction",
+};
+
 const CONFIG = {
   PARTICLES_AMOUNT: 1000,
   SPEED: 0.2,
   FLOAT_SPEED_DELTA: 0.3,
   DISTANCE_ACCELERATOR: 0.05,
-  DISTANCE_SLOW: 0.01,
+  DISTANCE_SLOW: 0.005,
+  SPEED_CAP: 2,
   CANVAS_WIDTH: 1728,
   CANVAS_HEIGHT: 897,
   DOT_SIZE: 2,
-  DISTANCE_TO_MOUSE: 100,
+  INTERACTION_DISTANCE: 100,
   PALETTE: THEMES.PALETTE_1,
+  mode: MODES.ATTRACTION,
+};
+
+const MOUSE_INITIAL_STATE = {
+  x: -1 * CONFIG.INTERACTION_DISTANCE,
+  y: -1 * CONFIG.INTERACTION_DISTANCE,
+  prevX: -1 * CONFIG.INTERACTION_DISTANCE,
+  prevY: -1 * CONFIG.INTERACTION_DISTANCE,
+  angle: 0,
 };
 
 window.onload = () => {
@@ -28,7 +43,7 @@ window.onload = () => {
   ctx.fillStyle = CONFIG.PARTICLE_COLOR;
 
   const particles = createParticles();
-  const mouse = { x: -200, y: -200 };
+  const mouse = MOUSE_INITIAL_STATE;
 
   document.addEventListener("mousemove", (e) =>
     updateMousePosition(e, rect, canvas, mouse)
@@ -46,7 +61,7 @@ const createParticles = () =>
   Array.from({ length: CONFIG.PARTICLES_AMOUNT }, () => ({
     x: Math.random() * CONFIG.CANVAS_WIDTH,
     y: Math.random() * CONFIG.CANVAS_HEIGHT,
-    alpha: Math.random() * Math.PI * 2,
+    angle: Math.random() * Math.PI * 2,
     speed: CONFIG.SPEED + Math.random() * 0.1,
     maxFloatingSpeed:
       CONFIG.SPEED + (Math.random() - 0.5) * CONFIG.FLOAT_SPEED_DELTA,
@@ -56,27 +71,59 @@ const createParticles = () =>
 const updateMousePosition = (e, rect, canvas, mouse) => {
   const scaleX = canvas.width / rect.width;
   const scaleY = canvas.height / rect.height;
+
+  mouse.prevX = mouse.x;
+  mouse.prevY = mouse.y;
+
   mouse.x = (e.clientX - rect.left) * scaleX;
   mouse.y = (e.clientY - rect.top) * scaleY;
+
+  if (mouse.x !== mouse.prevX && mouse.y !== mouse.prevY) {
+    mouse.angle = Math.atan2(mouse.y - mouse.prevY, mouse.x - mouse.prevX);
+  }
+};
+
+const mouseRepulsion = (particle, mouse) => {
+  const distanceToMouse = calculateDistance(particle, mouse);
+
+  if (distanceToMouse < CONFIG.INTERACTION_DISTANCE) {
+    const angle = Math.atan2(particle.y - mouse.y, particle.x - mouse.x);
+    particle.angle = angle;
+    particle.speed = particle.speed + CONFIG.DISTANCE_ACCELERATOR;
+  } else if (particle.speed > particle.maxFloatingSpeed) {
+    particle.speed -= CONFIG.DISTANCE_SLOW;
+  }
+};
+
+const mouseAttraction = (particle, mouse) => {
+  const distanceToMouse = calculateDistance(particle, mouse);
+
+  if (distanceToMouse < CONFIG.INTERACTION_DISTANCE) {
+    const angleDelta = Math.sign(mouse.angle - particle.angle) * 0.05;
+
+    particle.angle += angleDelta;
+    particle.speed = Math.min(
+      particle.speed + CONFIG.DISTANCE_ACCELERATOR,
+      CONFIG.SPEED_CAP
+    );
+  } else if (particle.speed > particle.maxFloatingSpeed) {
+    particle.speed -= CONFIG.DISTANCE_SLOW;
+  }
 };
 
 const updateParticlesPosition = (particles, mouse) => {
   particles.forEach((particle, i) => {
-    particle.x += Math.cos(particles[i].alpha) * particles[i].speed;
-    particle.y += Math.sin(particles[i].alpha) * particles[i].speed;
+    const updatePosition =
+      CONFIG.mode === "repulsion" ? mouseRepulsion : mouseAttraction;
+
+    updatePosition(particle, mouse);
+
+    particle.x += Math.cos(particles[i].angle) * particles[i].speed;
+    particle.y += Math.sin(particles[i].angle) * particles[i].speed;
 
     wrapAroundCanvas(particle);
 
-    const distanceToMouse = calculateDistance(particle, mouse);
-    if (distanceToMouse < CONFIG.DISTANCE_TO_MOUSE) {
-      const angle = Math.atan2(particle.y - mouse.y, particle.x - mouse.x);
-      particles[i].alpha = angle;
-      particles[i].speed += CONFIG.DISTANCE_ACCELERATOR;
-    } else if (Math.random() > 0.8) {
-      particles[i].alpha += Math.random() * 0.2 - 0.1;
-    } else if (particles[i].speed > particles[i].maxFloatingSpeed) {
-      particles[i].speed -= CONFIG.DISTANCE_SLOW;
-    }
+    particles[i].angle += Math.random() * 0.2 - 0.1;
   });
 };
 
