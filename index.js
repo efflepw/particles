@@ -3,14 +3,17 @@ const THEMES = {
   PALETTE_2: ["#f4f1de", "#e07a5f", "#3d405b", "#81b29a", "#f2cc8f"],
 };
 
-const MODES = {
+const MOUSE_MODES = {
   REPULSION: "repulsion",
   ATTRACTION: "attraction",
+  OFF: "off",
 };
 
 const CONFIG = {
   PARTICLES_AMOUNT: 1000,
   SPEED: 0.2,
+  SPEED_DELTA: 0.1,
+  ANGLE_DELTA: 0.2,
   FLOAT_SPEED_DELTA: 0.3,
   DISTANCE_ACCELERATOR: 0.05,
   DISTANCE_SLOW: 0.005,
@@ -20,7 +23,16 @@ const CONFIG = {
   DOT_SIZE: 2,
   INTERACTION_DISTANCE: 100,
   PALETTE: THEMES.PALETTE_1,
-  mode: MODES.ATTRACTION,
+  MOUSE_MODE: MOUSE_MODES.ATTRACTION,
+  ENABLE_WAVES: false,
+};
+
+const WAVES_CONFIG = {
+  COUNT: 1,
+  BASE_SPEED: 0.3,
+  SIZE: 100,
+  SPEED_DELTA: 0.4,
+  ANGLE_DELTA: 0.4,
 };
 
 const MOUSE_INITIAL_STATE = {
@@ -43,12 +55,15 @@ window.onload = () => {
   ctx.fillStyle = CONFIG.PARTICLE_COLOR;
 
   const particles = createParticles();
+  const waves = createWaves();
+
   const mouse = MOUSE_INITIAL_STATE;
 
   document.addEventListener("mousemove", (e) =>
     updateMousePosition(e, rect, canvas, mouse)
   );
-  animate(ctx, particles, mouse);
+
+  animate(ctx, particles, waves, mouse);
 };
 
 const getRandomColor = () => {
@@ -66,6 +81,14 @@ const createParticles = () =>
     maxFloatingSpeed:
       CONFIG.SPEED + (Math.random() - 0.5) * CONFIG.FLOAT_SPEED_DELTA,
     color: getRandomColor(),
+  }));
+
+const createWaves = () =>
+  Array.from({ length: CONFIG.WAVES_COUNT }, () => ({
+    x: Math.random() * CONFIG.CANVAS_WIDTH,
+    y: Math.random() * CONFIG.CANVAS_HEIGHT,
+    angle: Math.random() * Math.PI * 2,
+    speed: WAVES_CONFIG.BASE_SPEED + Math.random() * WAVES_CONFIG.SPEED_DELTA,
   }));
 
 const updateMousePosition = (e, rect, canvas, mouse) => {
@@ -88,6 +111,7 @@ const mouseRepulsion = (particle, mouse) => {
 
   if (distanceToMouse < CONFIG.INTERACTION_DISTANCE) {
     const angle = Math.atan2(particle.y - mouse.y, particle.x - mouse.x);
+
     particle.angle = angle;
     particle.speed = particle.speed + CONFIG.DISTANCE_ACCELERATOR;
   } else if (particle.speed > particle.maxFloatingSpeed) {
@@ -111,19 +135,40 @@ const mouseAttraction = (particle, mouse) => {
   }
 };
 
+const interactWithMouse = (particle, mouse) => {
+  switch (CONFIG.MOUSE_MODE) {
+    case MOUSE_MODES.REPULSION:
+      mouseRepulsion(particle, mouse);
+      break;
+    case MOUSE_MODES.ATTRACTION:
+      mouseAttraction(particle, mouse);
+      break;
+    default:
+      break;
+  }
+};
+
 const updateParticlesPosition = (particles, mouse) => {
-  particles.forEach((particle, i) => {
-    const updatePosition =
-      CONFIG.mode === "repulsion" ? mouseRepulsion : mouseAttraction;
+  particles.forEach((particle) => {
+    interactWithMouse(particle, mouse);
 
-    updatePosition(particle, mouse);
+    particle.x += Math.cos(particle.angle) * particle.speed;
+    particle.y += Math.sin(particle.angle) * particle.speed;
 
-    particle.x += Math.cos(particles[i].angle) * particles[i].speed;
-    particle.y += Math.sin(particles[i].angle) * particles[i].speed;
+    particle.angle += CONFIG.ANGLE_DELTA * (Math.random() - 0.5);
 
     wrapAroundCanvas(particle);
+  });
+};
 
-    particles[i].angle += Math.random() * 0.2 - 0.1;
+const updateWavesPosition = (waves) => {
+  waves.forEach((wave, i) => {
+    wave.x += Math.cos(wave.angle) * wave.speed;
+    wave.y += Math.sin(wave.angle) * wave.speed;
+
+    wave.angle += WAVES_CONFIG.ANGLE_DELTA * (Math.random() - 0.5);
+
+    wrapAroundCanvas(wave);
   });
 };
 
@@ -137,12 +182,16 @@ const wrapAroundCanvas = (particle) => {
 const calculateDistance = (p1, p2) =>
   Math.sqrt(Math.pow(p2.x - p1.x, 2) + Math.pow(p2.y - p1.y, 2));
 
-const animate = (ctx, particles, mouse) => {
+const animate = (ctx, particles, waves, mouse) => {
   ctx.clearRect(0, 0, CONFIG.CANVAS_WIDTH, CONFIG.CANVAS_HEIGHT);
+
   updateParticlesPosition(particles, mouse);
+  updateWavesPosition(waves);
+
   particles.forEach((particle) => {
     ctx.fillStyle = particle.color;
     ctx.fillRect(particle.x, particle.y, CONFIG.DOT_SIZE, CONFIG.DOT_SIZE);
   });
-  requestAnimationFrame(() => animate(ctx, particles, mouse));
+
+  requestAnimationFrame(() => animate(ctx, particles, waves, mouse));
 };
