@@ -10,29 +10,29 @@ const MOUSE_MODES = {
 };
 
 const CONFIG = {
-  PARTICLES_AMOUNT: 1000,
+  PARTICLES_AMOUNT: 1250,
   SPEED: 0.2,
   SPEED_DELTA: 0.1,
-  ANGLE_DELTA: 0.2,
+  ANGLE_DELTA: 0.05,
   FLOAT_SPEED_DELTA: 0.3,
-  DISTANCE_ACCELERATOR: 0.05,
-  DISTANCE_SLOW: 0.005,
+  DISTANCE_ACCELERATOR: 0.01,
+  DISTANCE_SLOW: 0.01,
   SPEED_CAP: 2,
   CANVAS_WIDTH: 1728,
   CANVAS_HEIGHT: 897,
   DOT_SIZE: 2,
   INTERACTION_DISTANCE: 100,
   PALETTE: THEMES.PALETTE_1,
-  MOUSE_MODE: MOUSE_MODES.ATTRACTION,
-  ENABLE_WAVES: false,
+  MOUSE_MODE: MOUSE_MODES.OFF,
+  ENABLE_WAVES: true,
 };
 
 const WAVES_CONFIG = {
-  COUNT: 1,
-  BASE_SPEED: 0.3,
-  SIZE: 100,
+  COUNT: 5,
+  BASE_SPEED: 0.5,
+  SIZE: 50,
   SPEED_DELTA: 0.4,
-  ANGLE_DELTA: 0.4,
+  ANGLE_DELTA: 0.1,
 };
 
 const MOUSE_INITIAL_STATE = {
@@ -59,9 +59,11 @@ window.onload = () => {
 
   const mouse = MOUSE_INITIAL_STATE;
 
-  document.addEventListener("mousemove", (e) =>
-    updateMousePosition(e, rect, canvas, mouse)
-  );
+  if (CONFIG.MOUSE_MODE !== MOUSE_MODES.OFF) {
+    document.addEventListener("mousemove", (e) =>
+      updateMousePosition(e, rect, canvas, mouse)
+    );
+  }
 
   animate(ctx, particles, waves, mouse);
 };
@@ -84,7 +86,7 @@ const createParticles = () =>
   }));
 
 const createWaves = () =>
-  Array.from({ length: CONFIG.WAVES_COUNT }, () => ({
+  Array.from({ length: WAVES_CONFIG.COUNT }, () => ({
     x: Math.random() * CONFIG.CANVAS_WIDTH,
     y: Math.random() * CONFIG.CANVAS_HEIGHT,
     angle: Math.random() * Math.PI * 2,
@@ -106,63 +108,76 @@ const updateMousePosition = (e, rect, canvas, mouse) => {
   }
 };
 
-const mouseRepulsion = (particle, mouse) => {
-  const distanceToMouse = calculateDistance(particle, mouse);
+const waveRepulsion = (particle, wave) => {
+  const distanceToWave = calculateDistance(particle, wave);
 
-  if (distanceToMouse < CONFIG.INTERACTION_DISTANCE) {
-    const angle = Math.atan2(particle.y - mouse.y, particle.x - mouse.x);
+  if (distanceToWave < CONFIG.INTERACTION_DISTANCE) {
+    const angle = Math.atan2(particle.y - wave.y, particle.x - wave.x);
 
     particle.angle = angle;
     particle.speed = particle.speed + CONFIG.DISTANCE_ACCELERATOR;
-  } else if (particle.speed > particle.maxFloatingSpeed) {
-    particle.speed -= CONFIG.DISTANCE_SLOW;
   }
 };
 
-const mouseAttraction = (particle, mouse) => {
-  const distanceToMouse = calculateDistance(particle, mouse);
+const waveAttraction = (particle, wave, size) => {
+  const distanceToWave = calculateDistance(particle, wave);
 
-  if (distanceToMouse < CONFIG.INTERACTION_DISTANCE) {
-    const angleDelta = Math.sign(mouse.angle - particle.angle) * 0.05;
+  if (distanceToWave < size) {
+    const angleDelta = Math.sign(wave.angle - particle.angle) * 0.05;
 
     particle.angle += angleDelta;
     particle.speed = Math.min(
       particle.speed + CONFIG.DISTANCE_ACCELERATOR,
       CONFIG.SPEED_CAP
     );
-  } else if (particle.speed > particle.maxFloatingSpeed) {
-    particle.speed -= CONFIG.DISTANCE_SLOW;
   }
 };
 
 const interactWithMouse = (particle, mouse) => {
   switch (CONFIG.MOUSE_MODE) {
     case MOUSE_MODES.REPULSION:
-      mouseRepulsion(particle, mouse);
+      waveRepulsion(particle, mouse);
       break;
     case MOUSE_MODES.ATTRACTION:
-      mouseAttraction(particle, mouse);
+      waveAttraction(particle, mouse, CONFIG.INTERACTION_DISTANCE);
       break;
     default:
       break;
   }
 };
 
-const updateParticlesPosition = (particles, mouse) => {
+const interactWithWaves = (particle, waves) => {
+  waves.forEach((wave) => {
+    waveAttraction(particle, wave, WAVES_CONFIG.SIZE);
+  });
+};
+
+const updateParticlesPosition = (particles, waves, mouse) => {
   particles.forEach((particle) => {
-    interactWithMouse(particle, mouse);
+    if (CONFIG.MOUSE_MODE !== MOUSE_MODES.OFF) {
+      interactWithMouse(particle, mouse);
+    }
+
+    if (CONFIG.ENABLE_WAVES) {
+      interactWithWaves(particle, waves);
+    }
 
     particle.x += Math.cos(particle.angle) * particle.speed;
     particle.y += Math.sin(particle.angle) * particle.speed;
 
     particle.angle += CONFIG.ANGLE_DELTA * (Math.random() - 0.5);
 
+    // @todo
+    // if (particle.speed > particle.maxFloatingSpeed) {
+    //   particle.speed -= CONFIG.DISTANCE_SLOW;
+    // }
+
     wrapAroundCanvas(particle);
   });
 };
 
 const updateWavesPosition = (waves) => {
-  waves.forEach((wave, i) => {
+  waves.forEach((wave) => {
     wave.x += Math.cos(wave.angle) * wave.speed;
     wave.y += Math.sin(wave.angle) * wave.speed;
 
@@ -185,12 +200,17 @@ const calculateDistance = (p1, p2) =>
 const animate = (ctx, particles, waves, mouse) => {
   ctx.clearRect(0, 0, CONFIG.CANVAS_WIDTH, CONFIG.CANVAS_HEIGHT);
 
-  updateParticlesPosition(particles, mouse);
   updateWavesPosition(waves);
+  updateParticlesPosition(particles, waves, mouse);
 
   particles.forEach((particle) => {
     ctx.fillStyle = particle.color;
     ctx.fillRect(particle.x, particle.y, CONFIG.DOT_SIZE, CONFIG.DOT_SIZE);
+  });
+
+  waves.forEach((particle) => {
+    ctx.fillStyle = "yellow";
+    ctx.fillRect(particle.x, particle.y, WAVES_CONFIG.SIZE, WAVES_CONFIG.SIZE);
   });
 
   requestAnimationFrame(() => animate(ctx, particles, waves, mouse));
