@@ -1,6 +1,9 @@
 const THEMES = {
   PALETTE_1: ["#264653", "#2a9d8f", "#e9c46a", "#f4a261", "#e76f51"],
   PALETTE_2: ["#f4f1de", "#e07a5f", "#3d405b", "#81b29a", "#f2cc8f"],
+  PALETTE_3: ["#fff"],
+  PALETTE_4: ["#FEFFD2", "#FFEEA9", "#FFBF78", "#FF7D29"],
+  PALETTE_5: ["#a67c00", "#bf9b30", "#ffbf00", "#ffcf40", "#ffdc73"],
 };
 
 const MOUSE_MODES = {
@@ -16,21 +19,21 @@ const CONFIG = {
   ANGLE_DELTA: 0.05,
   FLOAT_SPEED_DELTA: 0.3,
   DISTANCE_ACCELERATOR: 0.01,
-  DISTANCE_SLOW: 0.01,
-  SPEED_CAP: 2,
+  DISTANCE_SLOW: 0.005,
+  SPEED_CAP: 1.8,
   CANVAS_WIDTH: 1728,
   CANVAS_HEIGHT: 897,
   DOT_SIZE: 2,
   INTERACTION_DISTANCE: 100,
-  PALETTE: THEMES.PALETTE_1,
+  PALETTE: THEMES.PALETTE_5,
   MOUSE_MODE: MOUSE_MODES.OFF,
   ENABLE_WAVES: true,
 };
 
 const WAVES_CONFIG = {
-  COUNT: 5,
+  COUNT: 25,
   BASE_SPEED: 0.5,
-  SIZE: 50,
+  SIZE: 75,
   SPEED_DELTA: 0.4,
   ANGLE_DELTA: 0.1,
 };
@@ -116,7 +119,11 @@ const waveRepulsion = (particle, wave) => {
 
     particle.angle = angle;
     particle.speed = particle.speed + CONFIG.DISTANCE_ACCELERATOR;
+
+    return true;
   }
+
+  return false;
 };
 
 const waveAttraction = (particle, wave, size) => {
@@ -130,36 +137,45 @@ const waveAttraction = (particle, wave, size) => {
       particle.speed + CONFIG.DISTANCE_ACCELERATOR,
       CONFIG.SPEED_CAP
     );
+
+    return true;
   }
+
+  return false;
 };
 
 const interactWithMouse = (particle, mouse) => {
   switch (CONFIG.MOUSE_MODE) {
     case MOUSE_MODES.REPULSION:
-      waveRepulsion(particle, mouse);
-      break;
+      return waveRepulsion(particle, mouse);
     case MOUSE_MODES.ATTRACTION:
-      waveAttraction(particle, mouse, CONFIG.INTERACTION_DISTANCE);
-      break;
+      return waveAttraction(particle, mouse, CONFIG.INTERACTION_DISTANCE);
     default:
-      break;
+      return false;
   }
 };
 
 const interactWithWaves = (particle, waves) => {
+  let interacted = false;
+
   waves.forEach((wave) => {
-    waveAttraction(particle, wave, WAVES_CONFIG.SIZE);
+    interacted =
+      interacted || waveAttraction(particle, wave, WAVES_CONFIG.SIZE);
   });
+
+  return interacted;
 };
 
 const updateParticlesPosition = (particles, waves, mouse) => {
   particles.forEach((particle) => {
+    let interacted = false;
+
     if (CONFIG.MOUSE_MODE !== MOUSE_MODES.OFF) {
-      interactWithMouse(particle, mouse);
+      interacted = interactWithMouse(particle, mouse);
     }
 
     if (CONFIG.ENABLE_WAVES) {
-      interactWithWaves(particle, waves);
+      interacted = interacted || interactWithWaves(particle, waves);
     }
 
     particle.x += Math.cos(particle.angle) * particle.speed;
@@ -167,10 +183,9 @@ const updateParticlesPosition = (particles, waves, mouse) => {
 
     particle.angle += CONFIG.ANGLE_DELTA * (Math.random() - 0.5);
 
-    // @todo
-    // if (particle.speed > particle.maxFloatingSpeed) {
-    //   particle.speed -= CONFIG.DISTANCE_SLOW;
-    // }
+    if (!interacted && particle.speed > particle.maxFloatingSpeed) {
+      particle.speed -= CONFIG.DISTANCE_SLOW;
+    }
 
     wrapAroundCanvas(particle);
   });
@@ -206,11 +221,6 @@ const animate = (ctx, particles, waves, mouse) => {
   particles.forEach((particle) => {
     ctx.fillStyle = particle.color;
     ctx.fillRect(particle.x, particle.y, CONFIG.DOT_SIZE, CONFIG.DOT_SIZE);
-  });
-
-  waves.forEach((particle) => {
-    ctx.fillStyle = "yellow";
-    ctx.fillRect(particle.x, particle.y, WAVES_CONFIG.SIZE, WAVES_CONFIG.SIZE);
   });
 
   requestAnimationFrame(() => animate(ctx, particles, waves, mouse));

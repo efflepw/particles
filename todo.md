@@ -5,5 +5,5 @@
 - [x] add cursor movement interaction
 - [x] add different themes
 - [x] add attraction mouse interaction method
-- [ ] add waves
+- [x] add waves
 - [ ] add window resize handler
