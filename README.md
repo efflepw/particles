@@ -1,4 +1,4 @@
-# Particles package
+# Particles sea
 
 To use the script, connect the index.js to your index.html file, and add the <canvas id="canvas" /> tag.
 
