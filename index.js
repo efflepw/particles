@@ -4,6 +4,7 @@ const THEMES = {
   PALETTE_3: ["#fff"],
   PALETTE_4: ["#FEFFD2", "#FFEEA9", "#FFBF78", "#FF7D29"],
   PALETTE_5: ["#a67c00", "#bf9b30", "#ffbf00", "#ffcf40", "#ffdc73"],
+  PALETTE_6: ["#c4c4fd", "#ffec9c", "#6a71a5", "#35336b", "#091e36"],
 };
 
 const MOUSE_MODES = {
@@ -13,7 +14,7 @@ const MOUSE_MODES = {
 };
 
 const CONFIG = {
-  PARTICLES_AMOUNT: 1250,
+  PARTICLES_AMOUNT: 200,
   SPEED: 0.2,
   SPEED_DELTA: 0.1,
   ANGLE_DELTA: 0.05,
@@ -24,16 +25,17 @@ const CONFIG = {
   CANVAS_WIDTH: 1728,
   CANVAS_HEIGHT: 897,
   DOT_SIZE: 2,
+  ARC_SIZE: 3,
   INTERACTION_DISTANCE: 100,
-  PALETTE: THEMES.PALETTE_5,
+  PALETTE: THEMES.PALETTE_6,
   MOUSE_MODE: MOUSE_MODES.OFF,
   ENABLE_WAVES: true,
 };
 
 const WAVES_CONFIG = {
-  COUNT: 25,
+  COUNT: 10,
   BASE_SPEED: 0.5,
-  SIZE: 75,
+  SIZE: 50,
   SPEED_DELTA: 0.4,
   ANGLE_DELTA: 0.1,
 };
@@ -212,16 +214,32 @@ const wrapAroundCanvas = (particle) => {
 const calculateDistance = (p1, p2) =>
   Math.sqrt(Math.pow(p2.x - p1.x, 2) + Math.pow(p2.y - p1.y, 2));
 
+const renderParticlesRect = (ctx, particles) => {
+  particles.forEach((particle) => {
+    ctx.fillStyle = particle.color;
+    ctx.fillRect(particle.x, particle.y, CONFIG.DOT_SIZE, CONFIG.DOT_SIZE);
+  });
+};
+
+const renderParticlesArc = (ctx, particles) => {
+  particles.forEach((particle) => {
+    ctx.beginPath();
+    ctx.fillStyle = particle.color;
+    ctx.arc(particle.x, particle.y, CONFIG.ARC_SIZE, 0, Math.PI * 2);
+    ctx.shadowBlur = 10;
+    ctx.shadowColor = particle.color;
+    ctx.fill();
+  });
+};
+
 const animate = (ctx, particles, waves, mouse) => {
   ctx.clearRect(0, 0, CONFIG.CANVAS_WIDTH, CONFIG.CANVAS_HEIGHT);
 
   updateWavesPosition(waves);
   updateParticlesPosition(particles, waves, mouse);
 
-  particles.forEach((particle) => {
-    ctx.fillStyle = particle.color;
-    ctx.fillRect(particle.x, particle.y, CONFIG.DOT_SIZE, CONFIG.DOT_SIZE);
-  });
+  // renderParticlesRect(ctx, particles);
+  renderParticlesArc(ctx, particles);
 
   requestAnimationFrame(() => animate(ctx, particles, waves, mouse));
 };
